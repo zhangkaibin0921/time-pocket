@@ -1,0 +1,40 @@
+# Local tools, SDKs and generated output
+.tools/
+.gradle/
+.build-cache/
+**/build/
+dist/
+local.properties
+
+# Signing material and local configuration
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+key.properties
+keystore.properties
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Python cache and private runtime data
+__pycache__/
+*.py[cod]
+.venv/
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.apk
+*.aab
+*.idsig
