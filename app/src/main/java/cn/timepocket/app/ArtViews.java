@@ -1,5 +1,6 @@
 package cn.timepocket.app;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.*;
 import android.view.*;
@@ -44,13 +45,53 @@ final class ArtViews {
     static class Chart extends View {
         final long[] values;final String[] labels,descriptions;final Paint p=new Paint(3);int selected;
         private final java.util.function.IntConsumer listener;private float downX,downY;private boolean moved;
+        private int highlightIndex;
+        private float highlightOpacity;
+        private ValueAnimator highlightAnimator;
         Chart(Context c,long[] values,String[] labels,String[] descriptions,int selected,java.util.function.IntConsumer listener) {
             super(c);this.values=values;this.labels=labels;this.descriptions=descriptions;this.selected=selected;this.listener=listener;
-            setFocusable(true);setClickable(true);describe();setLayerType(View.LAYER_TYPE_SOFTWARE,null);
+            highlightIndex = selected;
+            highlightOpacity = selected < 0 ? 0f : 1f;
+            setFocusable(true);setClickable(true);describe();
         }
-        void clearSelection(){selected=-1;describe();invalidate();}
-        private void describe(){setContentDescription("使用时长柱状图"+(selected<0?"，未选择日期":"，已选 "+descriptions[selected]+"，"+MainActivity.duration(values[selected])));}
-        private void choose(int index){selected=index;describe();invalidate();if(listener!=null)listener.accept(index);}
+        long selectedDuration() { return selected < 0 ? 0 : values[selected]; }
+        void clearSelection() { animateSelection(-1); }
+        private void describe(){setContentDescription("使用时长柱状图"+(selected<0?"，未选择时段":"，已选 "+descriptions[selected]+"，"+MainActivity.duration(values[selected])));}
+        private void choose(int index) {
+            if (index == selected) return;
+            animateSelection(index);
+            listener.accept(index);
+        }
+
+        private void animateSelection(int index) {
+            if (index == selected) return;
+            if (highlightAnimator != null) highlightAnimator.cancel();
+            selected = index;
+            describe();
+            float target = index < 0 ? 0f : 1f;
+            if (index >= 0) {
+                highlightIndex = index;
+                highlightOpacity = 0f;
+            }
+            if (UiMotion.enabled()) {
+                highlightAnimator = ValueAnimator.ofFloat(highlightOpacity, target);
+                highlightAnimator.setDuration(165);
+                highlightAnimator.addUpdateListener(animation -> {
+                    highlightOpacity = (float) animation.getAnimatedValue();
+                    invalidate();
+                });
+                highlightAnimator.start();
+            } else {
+                highlightOpacity = target;
+                invalidate();
+            }
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            if (highlightAnimator != null) highlightAnimator.cancel();
+            highlightOpacity = selected < 0 ? 0f : 1f;
+            super.onDetachedFromWindow();
+        }
         @Override protected void onDraw(Canvas c) {
             super.onDraw(c);float d=getResources().getDisplayMetrics().density;
             float left=6*d,right=getWidth()-6*d,top=29*d,bottom=getHeight()-29*d;
@@ -59,21 +100,22 @@ final class ArtViews {
             p.setColor(Color.parseColor("#E9E8DF"));p.setStrokeWidth(d);
             for(int i=0;i<3;i++) {float y=top+(bottom-top)*i/2;c.drawLine(left,y,right,y,p);}
             float cell=(right-left)/values.length;float bar=Math.min(24*d,cell*.55f);
-            int highest=0;for(int i=1;i<values.length;i++)if(values[i]>values[highest])highest=i;
+            if (highlightIndex >= 0 && highlightOpacity > 0f) {
+                float x = left + cell * highlightIndex;
+                p.setColor(Color.argb(Math.round(255 * highlightOpacity), 238, 244, 238));
+                c.drawRoundRect(x, top - 4*d, x + cell, bottom + 4*d, 4*d, 4*d, p);
+            }
             int lastLabel=labels.length-1;while(lastLabel>=0&&labels[lastLabel]==null)lastLabel--;
             float lastTextRight=-Float.MAX_VALUE,finalLabelLeft=Float.MAX_VALUE;
             if(lastLabel>=0){float w=p.measureText(labels[lastLabel]),x=left+cell*(lastLabel+.5f);finalLabelLeft=Math.max(left+w/2,Math.min(x,right-w/2))-w/2;}
             for(int i=0;i<values.length;i++) {
                 float x=left+cell*(i+.5f),h=(bottom-top)*(float)values[i]/max;
-                p.setColor(i==selected?CORAL:Color.parseColor("#B7D6C8"));
-                c.drawRoundRect(x-bar/2,bottom-Math.max(3*d,h),x+bar/2,bottom,bar/2,bar/2,p);
+                p.setColor(i == selected ? UiTokens.FOREST : 0xff6d9d86);
+                if (values[i] > 0 || i == selected) {
+                    c.drawRoundRect(x-bar/2, bottom-Math.max(2*d,h), x+bar/2, bottom, 3*d, 3*d, p);
+                }
                 if(labels[i]!=null) {float w=p.measureText(labels[i]),tx=Math.max(left+w/2,Math.min(x,right-w/2));
                     if(i==lastLabel||(tx-w/2>=lastTextRight+4*d&&tx+w/2+4*d<=finalLabelLeft)){p.setColor(INK);p.setTextAlign(Paint.Align.CENTER);c.drawText(labels[i],tx,bottom+19*d,p);lastTextRight=tx+w/2;}
-                }
-                if(i==selected||(selected<0&&i==highest&&values[i]>0)) {
-                    p.setColor(UiTokens.PRIMARY);p.setTextAlign(Paint.Align.CENTER);String tip=MainActivity.duration(values[i]);
-                    float tx=Math.max(p.measureText(tip)/2+left,Math.min(x,right-p.measureText(tip)/2));
-                    c.drawText(tip,tx,Math.max(14*d,bottom-h-9*d),p);
                 }
             }
         }

@@ -19,12 +19,12 @@ public final class ActivityDetail extends DialogFragment {
     static ActivityDetail create(long id){ActivityDetail d=new ActivityDetail();Bundle b=new Bundle();b.putLong("id",id);d.setArguments(b);return d;}
     @Override public Dialog onCreateDialog(Bundle state){
         panel=column();panel.setPadding(dp(20),dp(20),dp(20),dp(16));panel.setBackground(surface(UiTokens.PAPER,26));panel.setClipToOutline(true);
-        panel.addView(label("手记详情",20,UiTokens.INK,true));space(panel,18);
-        content=column();ScrollView scroll=new ScrollView(getActivity()){@Override protected void onMeasure(int w,int h){int cap=dp(540);if(MeasureSpec.getMode(h)!=MeasureSpec.UNSPECIFIED)cap=Math.min(cap,MeasureSpec.getSize(h));super.onMeasure(w,MeasureSpec.makeMeasureSpec(cap,MeasureSpec.AT_MOST));}};scroll.setVerticalScrollBarEnabled(false);scroll.addView(content);panel.addView(scroll,new LinearLayout.LayoutParams(-1,-2,1));space(panel,12);
-        LinearLayout footer=new LinearLayout(getActivity());footer.setGravity(Gravity.CENTER_VERTICAL);footer.addView(action("关闭",false,this::dismiss),new LinearLayout.LayoutParams(dp(72),dp(50)));
-        edit=action("编辑手记",true,()->{PocketDb.ActivityEntry item=PocketDb.get(getActivity()).activity(getArguments().getLong("id"));if(item==null){refresh();return;}((MainActivity)getActivity()).editSavedActivity(item);});
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(50),1);lp.leftMargin=dp(8);footer.addView(edit,lp);panel.addView(footer);refresh();
-        Dialog dialog=new Dialog(getActivity());dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);dialog.setContentView(panel);return dialog;
+        LinearLayout toolbar=new LinearLayout(getActivity());toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        TextView caption=label("手记详情",13,UiTokens.MUTED,false);toolbar.addView(caption,new LinearLayout.LayoutParams(0,-2,1));
+        edit=action("编辑",false,()->{PocketDb.ActivityEntry item=PocketDb.get(getActivity()).activity(getArguments().getLong("id"));if(item==null){refresh();return;}((MainActivity)getActivity()).editSavedActivity(item);});edit.setContentDescription("编辑手记");edit.setTextColor(UiTokens.FOREST);toolbar.addView(edit,new LinearLayout.LayoutParams(dp(56),dp(48)));
+        FrameLayout close=new FrameLayout(getActivity());close.addView(new ArtViews.ActionIcon(getActivity(),ArtViews.ActionIcon.CLOSE),new FrameLayout.LayoutParams(dp(20),dp(20),Gravity.CENTER));close.setContentDescription("关闭手记详情");close.setFocusable(true);close.setBackground(UiControls.background(getActivity(),Color.TRANSPARENT,0));close.setOnClickListener(v->dismiss());toolbar.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));panel.addView(toolbar);space(panel,12);
+        content=column();ScrollView scroll=new ScrollView(getActivity()){@Override protected void onMeasure(int w,int h){int cap=dp(560);if(MeasureSpec.getMode(h)!=MeasureSpec.UNSPECIFIED)cap=Math.min(cap,MeasureSpec.getSize(h));super.onMeasure(w,MeasureSpec.makeMeasureSpec(cap,MeasureSpec.AT_MOST));}};scroll.setVerticalScrollBarEnabled(false);scroll.addView(content);panel.addView(scroll,new LinearLayout.LayoutParams(-1,-2,1));refresh();
+        Dialog dialog=new Dialog(getActivity());dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);dialog.getWindow().setWindowAnimations(R.style.PocketSheetMotion);dialog.setContentView(panel);return dialog;
     }
     void refresh(){
         if(content==null)return;content.removeAllViews();PocketDb db=PocketDb.get(getActivity());PocketDb.ActivityEntry item=db.activity(getArguments().getLong("id"));

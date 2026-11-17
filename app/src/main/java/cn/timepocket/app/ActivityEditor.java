@@ -29,8 +29,7 @@ public final class ActivityEditor extends DialogFragment {
     private TextView startButton,endButton,endCaption,error,duration,dateLabel;
     private LinearLayout sheet,photoStrip;
     private ArrayList<String> photos=new ArrayList<>();
-    private TextView addPhoto;
-    private final TextView[] categories=new TextView[PocketDb.CATEGORIES.length];
+    private TextView addPhoto,categoryButton;
     private static final int INK=ArtViews.INK,MUTED=UiTokens.MUTED,WHITE=Color.WHITE,LINE=UiTokens.OUTLINE;
 
     static ActivityEditor create(PocketDb.ActivityEntry entry,long start,long end){
@@ -54,40 +53,52 @@ public final class ActivityEditor extends DialogFragment {
         category=state.getString("category","其他");if(!Arrays.asList(PocketDb.CATEGORIES).contains(category))category="其他";
         sheet=column();sheet.setBackground(round(ArtViews.PAPER,26,false));sheet.setClipToOutline(true);sheet.setFocusableInTouchMode(true);
         LinearLayout header=row();header.setPadding(dp(20),dp(16),dp(12),dp(10));
-        LinearLayout heading=column();TextView name=label(sleepDay!=null?"调整睡眠":id==0?"记一件事":"编辑这段时光",20);name.setTypeface(null,Typeface.BOLD);heading.addView(name);space(heading,6);
-        dateLabel=label(date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd · EEEE",Locale.CHINA)),13);dateLabel.setTextColor(MUTED);dateLabel.setText(dateLabel.getText()+" ▾");dateLabel.setMinHeight(dp(48));dateLabel.setGravity(Gravity.CENTER_VERTICAL);dateLabel.setBackground(UiControls.background(getActivity(),Color.TRANSPARENT,0));dateLabel.setFocusable(true);dateLabel.setContentDescription("修改活动日期");dateLabel.setOnClickListener(v->((MainActivity)getActivity()).pickSingleDate("activity_date",date));heading.addView(dateLabel);
+        LinearLayout heading=column();TextView name=label(sleepDay!=null?"调整睡眠":id==0?"记一件事":"编辑这段时光",20);name.setTypeface(null,Typeface.BOLD);heading.addView(name);
+        dateLabel=label(date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd · EEEE",Locale.CHINA)),13);dateLabel.setTextColor(MUTED);dateLabel.setText(dateLabel.getText()+" ▾");dateLabel.setMinHeight(dp(48));dateLabel.setGravity(Gravity.CENTER_VERTICAL);dateLabel.setBackground(UiControls.background(getActivity(),Color.TRANSPARENT,0));dateLabel.setFocusable(true);dateLabel.setContentDescription("修改活动日期");dateLabel.setOnClickListener(v->((MainActivity)getActivity()).pickSingleDate("activity_date",date));
         header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         FrameLayout close=new FrameLayout(getActivity());close.setBackground(UiControls.background(getActivity(),Color.TRANSPARENT,0));close.addView(new ArtViews.ActionIcon(getActivity(),ArtViews.ActionIcon.CLOSE),new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.CENTER));close.setFocusable(true);close.setOnClickListener(v->requestClose());close.setContentDescription("关闭编辑，取消修改");header.addView(close,new LinearLayout.LayoutParams(dp(48),dp(48)));sheet.addView(header);
         LinearLayout form=column();form.setPadding(dp(20),0,dp(20),dp(6));
-        section(form,"做了什么");title=input("例如：读书、散步","活动名称",80,true);title.setText(state.getString("title"));title.setMinHeight(dp(56));form.addView(title,new LinearLayout.LayoutParams(-1,-2));space(form,18);
-        section(form,"分类");
-        int columns=getResources().getConfiguration().fontScale>1.15f?2:4;
-        for(int r=0;r<8/columns;r++){
-            LinearLayout line=row();for(int c=0;c<columns;c++){
-                final int index=r*columns+c;TextView chip=action(PocketDb.CATEGORIES[index],WHITE,INK,()->{category=PocketDb.CATEGORIES[index];updateCategories();});
-                chip.setTextSize(13);chip.setContentDescription("分类："+PocketDb.CATEGORIES[index]);categories[index]=chip;
-                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(48),1);if(c>0)lp.leftMargin=dp(7);line.addView(chip,lp);
-            }form.addView(line);if(r==0)space(form,7);
-        }updateCategories();space(form,18);
+        title=input("这一刻，在做什么？","活动名称",80,true);title.setTextSize(22);title.setTypeface(null,Typeface.BOLD);title.setPadding(0,dp(12),0,dp(12));title.setBackgroundColor(Color.TRANSPARENT);title.setText(state.getString("title"));title.setMinHeight(dp(56));form.addView(title,new LinearLayout.LayoutParams(-1,-2));space(form,4);
+        LinearLayout metadata=getResources().getConfiguration().fontScale>1.15f?column():row();metadata.addView(dateLabel,getResources().getConfiguration().fontScale>1.15f?new LinearLayout.LayoutParams(-1,dp(48)):new LinearLayout.LayoutParams(0,dp(48),1));
+        categoryButton=action("",UiTokens.GREEN,UiTokens.FOREST,()->new PocketDialogs.Builder(getActivity()).setTitle("选择分类").setItems(PocketDb.CATEGORIES,(d,w)->{category=PocketDb.CATEGORIES[w];updateCategories();}).setNegativeButton("取消",null).show());categoryButton.setPadding(dp(12),0,dp(12),0);categoryButton.setContentDescription("选择活动分类");metadata.addView(categoryButton,new LinearLayout.LayoutParams(-2,dp(48)));form.addView(metadata);updateCategories();space(form,16);
         LinearLayout timing=row();TextView timingTitle=label("这段时间",13);timingTitle.setTypeface(null,Typeface.BOLD);timing.addView(timingTitle,new LinearLayout.LayoutParams(0,-2,1));duration=label("",12);duration.setTextColor(UiTokens.PRIMARY);timing.addView(duration);form.addView(timing);space(form,9);
         boolean stackTimes=getResources().getConfiguration().screenWidthDp<360||getResources().getConfiguration().fontScale>1.15f;
-        LinearLayout times=stackTimes?column():row();times.addView(timeCard(true),stackTimes?new LinearLayout.LayoutParams(-1,-2):new LinearLayout.LayoutParams(0,-2,1));
-        TextView arrow=label(stackTimes?"↓":"→",19);arrow.setGravity(Gravity.CENTER);arrow.setTextColor(MUTED);times.addView(arrow,new LinearLayout.LayoutParams(stackTimes?-1:dp(28),stackTimes?dp(28):-2));
+        LinearLayout times=stackTimes?column():row();times.setBackground(round(UiTokens.GREEN,18,false));times.addView(timeCard(true),stackTimes?new LinearLayout.LayoutParams(-1,-2):new LinearLayout.LayoutParams(0,-2,1));
+        TextView arrow=label(stackTimes?"":"→",19);arrow.setGravity(Gravity.CENTER);arrow.setTextColor(MUTED);times.addView(arrow,new LinearLayout.LayoutParams(stackTimes?-1:dp(28),stackTimes?dp(4):-2));
         times.addView(timeCard(false),stackTimes?new LinearLayout.LayoutParams(-1,-2):new LinearLayout.LayoutParams(0,-2,1));form.addView(times);
         endsNextDay=state.getBoolean("next");space(form,18);
         section(form,"备注 · 选填");note=input("留下一点细节，方便以后回想","活动备注",1000,false);note.setMinLines(2);note.setMaxLines(4);note.setText(state.getString("note"));form.addView(note,new LinearLayout.LayoutParams(-1,-2));
-        space(form,16);section(form,"图片 · 最多 3 张");
-        HorizontalScrollView photoScroll=new HorizontalScrollView(getActivity());photoScroll.setHorizontalScrollBarEnabled(false);photoStrip=row();photoScroll.addView(photoStrip);form.addView(photoScroll);
-        addPhoto=action("＋ 添加图片",UiTokens.GREEN,UiTokens.FOREST,()->{try{startActivityForResult(new Intent(getActivity(),PhotoImportActivity.class).putExtra("remaining",EntryPhotos.MAX_COUNT-photos.size()),31);}catch(Exception e){showError("暂时无法打开图片选择器");}});form.addView(addPhoto,new LinearLayout.LayoutParams(-1,dp(48)));updatePhotos();
+        space(form, 10);
+        LinearLayout attachments = row();
+        TextView attachmentLabel = label("图片 · 最多 3 张", 12);
+        attachmentLabel.setTextColor(MUTED);
+        attachments.addView(attachmentLabel, new LinearLayout.LayoutParams(0, -2, 1));
+        addPhoto = action("＋ 添加图片", Color.TRANSPARENT, UiTokens.FOREST, () -> {
+            try {
+                startActivityForResult(new Intent(getActivity(), PhotoImportActivity.class)
+                        .putExtra("remaining", EntryPhotos.MAX_COUNT - photos.size()), 31);
+            } catch (Exception e) {
+                showError("暂时无法打开图片选择器");
+            }
+        });
+        addPhoto.setPadding(dp(10), 0, dp(6), 0);
+        attachments.addView(addPhoto, new LinearLayout.LayoutParams(-2, dp(48)));
+        form.addView(attachments);
+        HorizontalScrollView photoScroll = new HorizontalScrollView(getActivity());
+        photoScroll.setHorizontalScrollBarEnabled(false);
+        photoStrip = row();
+        photoScroll.addView(photoStrip);
+        form.addView(photoScroll);
+        updatePhotos();
         if(sleepDay!=null||id!=0){space(form,8);form.addView(action(sleepDay!=null?"不作为睡眠":"删除这条手记",ArtViews.PAPER,UiTokens.PRIMARY,this::remove),new LinearLayout.LayoutParams(-1,dp(48)));}
         error=label("",12);error.setTextColor(0xffb04d35);error.setPadding(0,dp(8),0,0);error.setVisibility(View.GONE);error.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);form.addView(error);updateTimes();
         ScrollView scroll=new ScrollView(getActivity()){
             @Override protected void onMeasure(int width,int height){int cap=dp(560);if(MeasureSpec.getMode(height)!=MeasureSpec.UNSPECIFIED)cap=Math.min(cap,MeasureSpec.getSize(height));super.onMeasure(width,MeasureSpec.makeMeasureSpec(cap,MeasureSpec.AT_MOST));}
         };scroll.setClipToPadding(false);scroll.setVerticalScrollBarEnabled(false);scroll.addView(form);sheet.addView(scroll,new LinearLayout.LayoutParams(-1,-2,1));
         LinearLayout footer=row();footer.setPadding(dp(20),dp(14),dp(20),dp(18));footer.addView(action("取消",Color.TRANSPARENT,MUTED,this::requestClose),new LinearLayout.LayoutParams(dp(76),dp(50)));
-        TextView save=action("保存这段时光",UiTokens.FOREST,WHITE,this::save);save.setContentDescription("保存活动");LinearLayout.LayoutParams saveLp=new LinearLayout.LayoutParams(0,dp(50),1);saveLp.leftMargin=dp(10);footer.addView(save,saveLp);sheet.addView(footer);
+        TextView save=action("保存",UiTokens.FOREST,WHITE,this::save);save.setContentDescription("保存活动");LinearLayout.LayoutParams saveLp=new LinearLayout.LayoutParams(0,dp(50),1);saveLp.leftMargin=dp(10);footer.addView(save,saveLp);sheet.addView(footer);
         original=saved==null?fingerprint():saved.getString("original",fingerprint());
-        Dialog dialog=new Dialog(getActivity()){@Override public void onBackPressed(){requestClose();}};dialog.setCanceledOnTouchOutside(false);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);dialog.setContentView(sheet);return dialog;
+        Dialog dialog=new Dialog(getActivity()){@Override public void onBackPressed(){requestClose();}};dialog.setCanceledOnTouchOutside(false);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);dialog.getWindow().setWindowAnimations(R.style.PocketSheetMotion);dialog.setContentView(sheet);return dialog;
     }
     @Override public void onStart(){
         super.onStart();Window window=getDialog().getWindow();
@@ -117,15 +128,15 @@ public final class ActivityEditor extends DialogFragment {
         catch(Exception e){showError("保存失败，原记录未修改，请稍后重试。");}
     }
     private View timeCard(boolean start){
-        LinearLayout card=column();card.setPadding(dp(16),dp(12),dp(12),dp(12));card.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x226b8d7c),round(0xffffe9dc,18,false),round(WHITE,18,false)));card.setContentDescription(start?"设置开始时间":"设置结束时间");card.setFocusable(true);
-        TextView caption=label(start?"开始时间":"结束时间",11);caption.setTextColor(UiTokens.PRIMARY);card.addView(caption);if(!start)endCaption=caption;space(card,6);
+        boolean narrow=getResources().getConfiguration().screenWidthDp<360||getResources().getConfiguration().fontScale>1.15f;LinearLayout card=narrow?row():column();card.setPadding(dp(16),dp(12),dp(12),dp(12));card.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x226b8d7c),round(Color.TRANSPARENT,18,false),round(WHITE,18,false)));card.setContentDescription(start?"设置开始时间":"设置结束时间");card.setFocusable(true);
+        TextView caption=label(start?"开始时间":"结束时间",11);caption.setTextColor(MUTED);card.addView(caption,narrow?new LinearLayout.LayoutParams(0,-2,1):new LinearLayout.LayoutParams(-1,-2));if(!start)endCaption=caption;if(!narrow)space(card,6);
         TextView value=label("",22);value.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));card.addView(value);if(start)startButton=value;else endButton=value;
         card.setOnClickListener(v->{if(getFragmentManager().findFragmentByTag("time_range")==null)TimeRangeDialog.create(date,from,to,endsNextDay).show(getFragmentManager(),"time_range");});return card;
     }
     void applyTimeRange(LocalTime start,LocalTime end,boolean next){from=start;to=end;endsNextDay=next;updateTimes();if(error!=null)error.setVisibility(View.GONE);}
     void applyCalendarDate(LocalDate selected){date=selected;dateLabel.setText(date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd · EEEE",Locale.CHINA))+" ▾");updateTimes();}
     private void updateTimes(){startButton.setText(timeText(from));endButton.setText(timeText(to));endCaption.setText(endsNextDay?"结束 · 次日":"结束时间");long a=date.atTime(from).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),b=date.plusDays(endsNextDay?1:0).atTime(to).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();duration.setText(b>a?"共 "+MainActivity.duration(b-a):"待调整时间");}
-    private void updateCategories(){int[] fills={0xffe6f0e5,0xffe5edf6,0xffffe6d8,0xfff7edce,0xffeee8f8,0xffe4f1ee,0xfff8e8ee,0xffedece3};for(int i=0;i<categories.length;i++){TextView chip=categories[i];if(chip==null)continue;boolean selected=category.equals(PocketDb.CATEGORIES[i]);chip.setText((selected?"✓ ":"")+PocketDb.CATEGORIES[i]);chip.setSelected(selected);chip.setTextColor(selected?INK:MUTED);chip.setBackground(UiControls.background(getActivity(),selected?fills[i]:Color.TRANSPARENT,6));}}
+    private void updateCategories(){if(categoryButton!=null)categoryButton.setText(category+"  ▾");}
     private String timeText(LocalTime time){return time.format(DateTimeFormatter.ofPattern(time.getSecond()==0?"HH:mm":"HH:mm:ss"));}
     @Override public void onSaveInstanceState(Bundle state){
         super.onSaveInstanceState(state);state.putLong("id",id);state.putString("date",date.toString());state.putString("from",from.toString());state.putString("to",to.toString());state.putBoolean("next",endsNextDay);state.putString("title",title.getText().toString());state.putString("note",note.getText().toString());state.putString("category",category);
@@ -148,7 +159,7 @@ public final class ActivityEditor extends DialogFragment {
     private LinearLayout row(){LinearLayout l=new LinearLayout(getActivity());l.setGravity(Gravity.CENTER_VERTICAL);return l;}
     private void section(LinearLayout parent,String name){TextView label=label(name,13);label.setTypeface(null,Typeface.BOLD);parent.addView(label);space(parent,9);}
     private TextView action(String text,int fill,int color,Runnable action){TextView v=label(text,14);v.setGravity(Gravity.CENTER);v.setTextColor(color);v.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));v.setBackground(UiControls.background(getActivity(),fill,4));v.setFocusable(true);v.setOnClickListener(w->action.run());return v;}
-    private EditText input(String hint,String description,int limit,boolean single){EditText e=new EditText(getActivity());e.setTextSize(single?16:14);e.setTextColor(INK);e.setHintTextColor(MUTED);e.setHint(hint);e.setContentDescription(description);e.setSingleLine(single);e.setPadding(dp(15),dp(14),dp(15),dp(14));e.setGravity(Gravity.TOP|Gravity.START);e.setBackground(round(WHITE,16,true));e.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)});if(!single)e.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);return e;}
+    private EditText input(String hint,String description,int limit,boolean single){EditText e=new EditText(getActivity());e.setTextSize(single?16:14);e.setTextColor(INK);e.setHintTextColor(MUTED);e.setHint(hint);e.setContentDescription(description);e.setSingleLine(single);e.setPadding(dp(15),dp(14),dp(15),dp(14));e.setGravity(Gravity.TOP|Gravity.START);e.setBackground(round(WHITE,16,false));e.setFilters(new InputFilter[]{new InputFilter.LengthFilter(limit)});if(!single)e.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);return e;}
     private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
     private void space(LinearLayout parent,int height){parent.addView(new View(getActivity()),new LinearLayout.LayoutParams(1,dp(height)));}
 }

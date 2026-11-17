@@ -14,16 +14,34 @@ import java.io.*;
 import java.util.*;
 
 public final class Collector {
-    private static final long WINDOW=2*24*60*60*1000L;
+    private static final long DAY = 86_400_000L;
+    private static final long REPLAY_WINDOW = 2 * DAY;
+    private static final long CATCH_UP_LIMIT = 7 * DAY;
     public static boolean allowed(Context c) {
         AppOpsManager ops=(AppOpsManager)c.getSystemService(Context.APP_OPS_SERVICE);
         return ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,android.os.Process.myUid(),c.getPackageName())==AppOpsManager.MODE_ALLOWED;
     }
-    public static synchronized void sync(Context context) throws Exception {
+    public static void sync(Context context) {
+        sync(context, 5_000);
+    }
+
+    static void syncForeground(Context context) {
+        sync(context, 0);
+    }
+
+    private static synchronized void sync(Context context, long eventDelay) {
         Context c=context.getApplicationContext();
         if (!c.getSystemService(UserManager.class).isUserUnlocked()) return;
         PocketDb db=PocketDb.get(c);
-        long now=System.currentTimeMillis(), end=now-5000;
+        long now = System.currentTimeMillis();
+        try {
+            syncUsage(c, db, now, now - eventDelay);
+        } finally {
+            inventory(c, System.currentTimeMillis(), db);
+        }
+    }
+
+    private static void syncUsage(Context c, PocketDb db, long now, long end) {
         SQLiteDatabase sql=db.getWritableDatabase();
         if (!allowed(c)) {
             long last=db.number("cursor");
@@ -35,26 +53,31 @@ public final class Collector {
                 db.put("permission_lost",1);
                 sql.setTransactionSuccessful();
             } finally {sql.endTransaction();}
-            inventory(c,now);
             return;
         }
         long last=db.number("cursor");
         if(last>end+60000) {
             db.gap(end,last,"系统时间回退，暂停采集直到时间恢复，避免重复累计");
-            inventory(c,now);return;
+            return;
         }
-        if(last>=end) {inventory(c,now);return;}
-        // Overlapping reads repair late-arriving events. Keep our own raw events even
-        // if Android later removes them after another app is uninstalled.
-        long from=Math.max(db.number("restore_floor"),end-WINDOW);
-        long begin=Math.max(db.number("restore_floor"),from-UsageEngine.MAX_SESSION);
+        if (last >= end) return;
+
+        // Regular reads overlap for late events. After a long pause or an upgrade,
+        // also ask for older events that the device may still retain.
+        long floor = db.number("restore_floor");
+        long recentFrom = Math.max(floor, end - REPLAY_WINDOW);
+        boolean firstCatchUp = db.number("usage_catchup_v1") == 0;
+        long from = replayStart(end, last, floor, firstCatchUp);
+        long begin = Math.max(floor, from - UsageEngine.MAX_SESSION);
         UsageStatsManager manager=c.getSystemService(UsageStatsManager.class);
         UsageEvents events=manager.queryEvents(begin,end);
         if(events==null) return;
         List<UsageEngine.Event> input=new ArrayList<>();
         UsageEvents.Event event=new UsageEvents.Event();
+        long earliest = end;
         while(events.hasNextEvent()) {
-            events.getNextEvent(event);
+            if (!events.getNextEvent(event)) break;
+            earliest = Math.min(earliest, event.getTimeStamp());
             // Activity instance identifiers are not exposed by the public SDK.
             String activity=String.valueOf(event.getClassName());
             int type=event.getEventType();
@@ -63,23 +86,68 @@ public final class Collector {
         }
         sql.beginTransaction();
         try {
-            if(db.number("tracking_since")==0) {db.put("tracking_since",now);db.put("import_begin",from);}
-            if(last>0&&last<from) db.gap(last,from,"后台间隔过长，明细可能已过期");
-            for(UsageEngine.Event e:input)db.event(e);
-            List<UsageEngine.Event> cached=db.events(begin,end);
-            Map<String,Long> affected=new HashMap<>();
-            for(UsageEngine.Event e:cached)if(e.type()==1&&!e.pkg().isEmpty())affected.merge(e.pkg(),e.at(),Math::min);
-            UsageEngine.Result result=UsageEngine.confirmed(cached,begin,end);
-            for(Map.Entry<String,Long> entry:affected.entrySet())
-                db.replaceUsage(Math.max(from,entry.getValue()),end,Collections.singleton(entry.getKey()),result.segments());
-            if(result.uncertain()) db.gap(begin,end,"重启或异常使用片段，部分时长无法确认");
-            sql.delete("raw_events","at<?",new String[]{""+(now-7*86400000L)});
-            db.put("state","{}");db.put("cursor",end);db.put("last_sync",now);db.put("permission_lost",0);
-            db.put("last_event_count",cached.size());db.put("replay_from",from);
+            if (db.number("tracking_since") == 0) {
+                db.put("tracking_since", now);
+                db.put("import_begin", Math.max(from, earliest));
+            } else if (firstCatchUp && earliest < db.number("import_begin")) {
+                db.put("import_begin", Math.max(from, earliest));
+            }
+            if (last > 0 && last < recentFrom) {
+                db.gap(last, Math.max(from, Math.min(earliest, end)),
+                        "较早的系统使用事件可能已过期");
+            }
+            for (UsageEngine.Event e : input) db.event(e);
+            List<UsageEngine.Event> cached = db.events(begin, end);
+            replayUsage(db, cached, begin, from, recentFrom, end);
+            sql.delete("raw_events", "at<?",
+                    new String[]{Long.toString(now - CATCH_UP_LIMIT - UsageEngine.MAX_SESSION)});
+            db.put("state", "{}");
+            db.put("cursor", end);
+            db.put("last_sync", now);
+            db.put("permission_lost", 0);
+            db.put("usage_catchup_v1", 1);
+            db.put("last_event_count", cached.size());
+            db.put("replay_from", from);
             sql.setTransactionSuccessful();
         } finally {sql.endTransaction();}
-        inventory(c,now);
     }
+
+    static long replayStart(long end, long last, long floor, boolean firstCatchUp) {
+        long oldest = end - CATCH_UP_LIMIT;
+        long regular = end - REPLAY_WINDOW;
+        long desired = firstCatchUp || last == 0 ? oldest : Math.min(last, regular);
+        return Math.max(floor, Math.max(oldest, desired));
+    }
+
+    // Caller owns the transaction. Older backfill only adds closed intervals.
+    static void replayUsage(PocketDb db, List<UsageEngine.Event> cached,
+                            long begin, long from, long recentFrom, long end) {
+        UsageEngine.Result result = UsageEngine.confirmed(cached, begin, end);
+        Map<String, List<UsageEngine.Segment>> byPackage = new HashMap<>();
+        for (UsageEngine.Segment segment : result.segments()) {
+            long olderStart = Math.max(from, segment.start());
+            long olderEnd = Math.min(recentFrom, segment.end());
+            if (olderEnd > olderStart) {
+                db.recoverUsage(new UsageEngine.Segment(segment.pkg(), olderStart, olderEnd));
+            }
+            byPackage.computeIfAbsent(segment.pkg(), key -> new ArrayList<>()).add(segment);
+        }
+        Map<String, Long> firstResume = new HashMap<>();
+        for (UsageEngine.Event e : cached) {
+            if (e.type() == UsageEngine.RESUME && !e.pkg().isEmpty()) {
+                firstResume.putIfAbsent(e.pkg(), e.at());
+            }
+        }
+        for (Map.Entry<String, Long> entry : firstResume.entrySet()) {
+            String pkg = entry.getKey();
+            db.replaceUsage(Math.max(recentFrom, entry.getValue()), end, Set.of(pkg),
+                    byPackage.getOrDefault(pkg, List.of()));
+        }
+        if (result.uncertain()) {
+            db.gap(begin, end, "重启或异常使用片段，部分时长无法确认");
+        }
+    }
+
     public static synchronized void inventory(Context c,long now) {
         inventory(c,now,PocketDb.get(c));
     }
@@ -121,18 +189,24 @@ public final class Collector {
         sql.beginTransaction();
         try(Cursor cur=sql.rawQuery("SELECT label,installed FROM apps WHERE pkg=?",new String[]{pkg})) {
             if(cur.moveToFirst()) {
-                db.lifecycle(pkg,cur.getString(0),"remove",at,false,"broadcast");
+                db.confirmFootprint(pkg, cur.getString(0), "remove", at);
                 sql.execSQL("UPDATE apps SET installed=0 WHERE pkg=?",new Object[]{pkg});
-            } else db.lifecycle(pkg,pkg,"remove",at,false,"broadcast");
+            } else db.confirmFootprint(pkg, pkg, "remove", at);
             sql.setTransactionSuccessful();
         } finally {sql.endTransaction();}
     }
+    static synchronized void collectAfterRemoval(Context c) {
+        if (!c.getSystemService(UserManager.class).isUserUnlocked() || !allowed(c)) return;
+        long now = System.currentTimeMillis();
+        syncUsage(c, PocketDb.get(c), now, now + 1);
+    }
+
     public static synchronized void added(Context c,String pkg,long at) {
         PocketDb db=PocketDb.get(c);String label=pkg;
         try {label=c.getPackageManager().getApplicationLabel(c.getPackageManager().getApplicationInfo(pkg,0)).toString();}catch(PackageManager.NameNotFoundException ignored){}
         SQLiteDatabase sql=db.getWritableDatabase();sql.beginTransaction();
         try {
-            db.lifecycle(pkg,label,"install",at,false,"broadcast");
+            db.confirmFootprint(pkg, label, "install", at);
             ContentValues v=new ContentValues();v.put("pkg",pkg);v.put("label",label);v.put("installed",1);
             try {v.put("first_install",c.getPackageManager().getPackageInfo(pkg,0).firstInstallTime);}catch(PackageManager.NameNotFoundException ignored){}
             sql.insertWithOnConflict("apps",null,v,SQLiteDatabase.CONFLICT_REPLACE);

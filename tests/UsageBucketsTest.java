@@ -25,6 +25,18 @@ public final class UsageBucketsTest {
         check(leap.get(1).first().equals(LocalDate.of(2024,2,29)),"leap day selectable");
         var dst=UsageBuckets.days(LocalDate.of(2026,3,8),LocalDate.of(2026,3,8)).get(0);ZoneId zone=ZoneId.of("America/New_York");
         check(Duration.between(dst.first().atStartOfDay(zone),dst.last().plusDays(1).atStartOfDay(zone)).toHours()==23,"local day bounds respect daylight saving");
+        var skipped=UsageBuckets.hour(dst.first(),2,zone,Long.MAX_VALUE);
+        check(skipped.start()==skipped.end(),"skipped clock hour is empty");
+        var repeated=UsageBuckets.hour(LocalDate.of(2026,11,1),1,zone,Long.MAX_VALUE);
+        check(repeated.end()-repeated.start()==7_200_000,"repeated clock hour includes both passes");
+        ZoneId shanghai=ZoneId.of("Asia/Shanghai");
+        long now=first.atTime(14,25).atZone(shanghai).toInstant().toEpochMilli();
+        var current=UsageBuckets.hour(first,14,shanghai,now);
+        check(current.end()==now&&current.end()-current.start()==25*60_000,"current hour stops at now");
+        var future=UsageBuckets.hour(first,15,shanghai,now);
+        check(future.start()==future.end(),"future hour is empty");
+        var late=UsageBuckets.hour(first,23,shanghai,Long.MAX_VALUE);
+        check(late.end()==first.plusDays(1).atStartOfDay(shanghai).toInstant().toEpochMilli(),"23:00 column ends at local midnight");
         boolean rejected=false;try{UsageBuckets.days(first,first.minusDays(1));}catch(IllegalArgumentException e){rejected=true;}
         check(rejected,"invalid range rejected");
         System.out.println("PASS: "+checks+" chart date-bucket assertions");

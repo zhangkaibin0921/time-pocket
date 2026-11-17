@@ -85,6 +85,16 @@ public final class PocketDb extends SQLiteOpenHelper {
         v.put("source",source);
         getWritableDatabase().insertOrThrow("lifecycle",null,v);
     }
+    /** A notification supersedes a snapshot taken while that notification was queued. */
+    void confirmFootprint(String pkg, String label, String kind, long at) {
+        String observedKinds = kind.equals("remove")
+                ? "('observed_missing')" : "('observed_present','install_time_changed')";
+        getWritableDatabase().delete("lifecycle",
+                "pkg=? AND source='inventory' AND kind IN " + observedKinds + " AND at>=?",
+                new String[]{pkg, Long.toString(at)});
+        lifecycle(pkg, label, kind, at, false, "broadcast");
+    }
+
     public void event(UsageEngine.Event e) {
         ContentValues v=new ContentValues();v.put("at",e.at());v.put("pkg",e.pkg()==null?"":e.pkg());v.put("activity",e.activity()==null?"":e.activity());v.put("type",e.type());
         getWritableDatabase().insertWithOnConflict("raw_events",null,v,SQLiteDatabase.CONFLICT_IGNORE);
@@ -114,8 +124,24 @@ public final class PocketDb extends SQLiteOpenHelper {
             if(b>a&&packages.contains(s.pkg()))segment(new UsageEngine.Segment(s.pkg(),a,b));
         }
     }
+    void recoverUsage(UsageEngine.Segment segment) {
+        SQLiteDatabase db = getWritableDatabase();
+        String overlap = "pkg=? AND end>=? AND start<=?";
+        String[] args = {segment.pkg(), Long.toString(segment.start()), Long.toString(segment.end())};
+        long start = segment.start(), end = segment.end();
+        try (Cursor cursor = db.rawQuery("SELECT MIN(start),MAX(end) FROM sessions WHERE " + overlap, args)) {
+            if (cursor.moveToFirst() && !cursor.isNull(0)) {
+                start = Math.min(start, cursor.getLong(0));
+                end = Math.max(end, cursor.getLong(1));
+            }
+        }
+        db.delete("sessions", overlap, args);
+        segment(new UsageEngine.Segment(segment.pkg(), start, end));
+    }
+
     public record AppUsage(String pkg,String label,long duration,boolean installed) {}
     public List<AppUsage> ranking(long begin,long end,String onlyPkg) {
+        if(begin>=end) return List.of();
         String filter=onlyPkg==null?"":" AND s.pkg=?";
         String[] args=onlyPkg==null?new String[]{""+end,""+begin,""+begin,""+end}:new String[]{""+end,""+begin,""+begin,""+end,onlyPkg};
         List<AppUsage> result=new ArrayList<>();
@@ -151,8 +177,19 @@ public final class PocketDb extends SQLiteOpenHelper {
     }
     public List<Footprint> findFootprints(String kind,String pkg,long begin,long end,int limit){
         List<Footprint> rows=new ArrayList<>();List<String> args=new ArrayList<>(List.of(""+begin,""+end));
-        String where="source='broadcast' AND kind IN ('install','remove') AND at>=? AND at<?";
-        if(kind!=null){where+=" AND kind=?";args.add(kind);}if(pkg!=null){where+=" AND pkg=?";args.add(pkg);}args.add(""+limit);
+        String where = """
+                ((source='broadcast' AND kind IN ('install','remove'))
+                 OR (source='inventory' AND kind IN ('observed_present','observed_missing','install_time_changed')))
+                 AND at>=? AND at<?
+                """;
+        if ("install".equals(kind)) {
+            where += " AND kind IN ('install','observed_present','install_time_changed')";
+        } else if ("remove".equals(kind)) {
+            where += " AND kind IN ('remove','observed_missing')";
+        } else if (kind != null) {
+            return rows;
+        }
+        if(pkg!=null){where+=" AND pkg=?";args.add(pkg);}args.add(""+limit);
         try(Cursor c=getReadableDatabase().rawQuery("SELECT pkg,label,kind,at,approx,source FROM lifecycle WHERE "+where+" ORDER BY at DESC,id DESC LIMIT ?",args.toArray(new String[0]))){while(c.moveToNext())rows.add(new Footprint(c.getString(0),c.getString(1),c.getString(2),c.getLong(3),c.getInt(4)!=0,c.getString(5)));}return rows;
     }
     public List<ActivityEntry> findActivities(String query,String category,long begin,long end,int limit){

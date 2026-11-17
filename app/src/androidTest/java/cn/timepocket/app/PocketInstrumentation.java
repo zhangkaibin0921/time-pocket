@@ -24,6 +24,8 @@ public final class PocketInstrumentation extends Instrumentation {
             eq(helper.total(0,1000,null),100,"duplicate insertion is idempotent");
             eq(helper.total(120,150,null),30,"SQL clips custom bounds");
             eq(helper.total(200,300,null),0,"half-open boundaries");
+            eq(helper.ranking(150,150,null).size(),0,"empty interval excludes spanning apps");
+            eq(helper.ranking(151,150,"sample.app").size(),0,"reversed interval excludes spanning app in detail");
             ContentValues app=new ContentValues();app.put("pkg","sample.app");app.put("label","Sample");app.put("installed",1);
             db.insertWithOnConflict("apps",null,app,SQLiteDatabase.CONFLICT_REPLACE);
             helper.lifecycle("sample.app","Sample","remove",250,false);
@@ -109,7 +111,7 @@ public final class PocketInstrumentation extends Instrumentation {
                 eq(upgraded.footprints("pending").size(),1,"upgrade preserves old footprints as pending");
             }
             getTargetContext().deleteDatabase("qa-v1.db");
-            journalChecks();historyChecks();photoChecks();
+            journalChecks();historyChecks();photoChecks();catchUpChecks();
             Set<String> homes=HomeApps.packages(getTargetContext());
             eq(homes.contains(getTargetContext().getPackageName())?1:0,0,"ordinary app with launcher icon is not hidden as home");
             android.content.pm.ResolveInfo home=getTargetContext().getPackageManager().resolveActivity(new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME),android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
@@ -117,6 +119,48 @@ public final class PocketInstrumentation extends Instrumentation {
             report.putString("stream","PASS: "+assertions+" Android SQLite assertions\n");finish(Activity.RESULT_OK,report);
         } catch(Throwable e){report.putString("stream","FAIL: "+e.toString());finish(Activity.RESULT_CANCELED,report);}
         finally {if(helper!=null)helper.close();getTargetContext().deleteDatabase("qa-accounting.db");}
+    }
+    private void catchUpChecks() {
+        String name = "qa-catchup.db";
+        long day = 86_400_000L, end = 20 * day, regular = end - 2 * day;
+        long last = end - 4 * day;
+        eq(Collector.replayStart(end, last, 0, false), last, "resume after four days starts at cursor");
+        eq(Collector.replayStart(end, end - 12 * day, 0, false), end - 7 * day, "lookback is bounded");
+        eq(Collector.replayStart(end, end - day, 0, true), end - 7 * day, "upgrade tries older retained history");
+        eq(Collector.replayStart(end, last, regular + 1, true), regular + 1, "restore floor is respected");
+        try (PocketDb helper = new PocketDb(getTargetContext(), name)) {
+            long from = Collector.replayStart(end, last, 0, false);
+            long start = from + 60_000;
+            helper.segment(new UsageEngine.Segment("qa.removed", start - 30_000, start + 15_000));
+            List<UsageEngine.Event> events = new ArrayList<>(List.of(
+                    new UsageEngine.Event(start, "qa.removed", "A", UsageEngine.RESUME),
+                    new UsageEngine.Event(start + 60_000, "qa.removed", "A", UsageEngine.PAUSE),
+                    new UsageEngine.Event(start + 70_000, "qa.removed", "A", UsageEngine.RESUME)));
+            SQLiteDatabase sql = helper.getWritableDatabase();
+            sql.beginTransaction();
+            try {
+                Collector.replayUsage(helper, events, from, from, regular, end);
+                Collector.replayUsage(helper, events, from, from, regular, end);
+                sql.setTransactionSuccessful();
+            } finally {
+                sql.endTransaction();
+            }
+            eq(helper.total(0, end, "qa.removed"), 90_000, "backfill preserves old coverage without duplicating overlaps or open tails");
+            eq(helper.ranking(0, end, "qa.removed").get(0).installed() ? 1 : 0, 0, "recovered app can be absent from installed list");
+
+            helper.lifecycle("qa.removed", "QA", "remove", 20, true, "legacy");
+            helper.lifecycle("qa.removed", "QA", "observed_missing", 40, true, "inventory");
+            helper.lifecycle("qa.removed", "QA", "observed_present", 30, true, "inventory");
+            eq(helper.findFootprints("remove", "qa.removed", 0, 50, 10).size(), 1, "app disappearance shows in removal filter, legacy excluded");
+            eq(helper.findFootprints("install", "qa.removed", 0, 50, 10).size(), 1, "app appearance shows in installation filter");
+            helper.confirmFootprint("qa.removed", "QA", "remove", 39);
+            List<PocketDb.Footprint> removals = helper.findFootprints("remove", "qa.removed", 0, 50, 10);
+            eq(removals.size(), 1, "queued system notification replaces matching observation");
+            eq(removals.get(0).approximate() ? 1 : 0, 0, "confirmed event retains its source");
+            eq(removals.get(0).at(), 39, "confirmed event retains its time");
+        } finally {
+            getTargetContext().deleteDatabase(name);
+        }
     }
     private void journalChecks() throws Exception {
         String name="qa-journal.db";getTargetContext().deleteDatabase(name);

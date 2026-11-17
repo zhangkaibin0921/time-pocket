@@ -16,4 +16,8 @@
         <item name="android:colorAccent">#284B40</item>
         <item name="android:windowBackground">#FAF7F0</item>
     </style>
+    <style name="PocketSheetMotion" parent="@android:style/Animation">
+        <item name="android:windowEnterAnimation">@anim/pocket_sheet_enter</item>
+        <item name="android:windowExitAnimation">@anim/pocket_sheet_exit</item>
+    </style>
 </resources>

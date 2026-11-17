@@ -7,8 +7,8 @@ android {
         applicationId 'cn.timepocket.app'
         minSdk 26
         targetSdk 35
-        versionCode 31
-        versionName '0.6.1'
+        versionCode 38
+        versionName '0.6.8'
         testInstrumentationRunner 'cn.timepocket.app.PocketInstrumentation'
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }

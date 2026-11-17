@@ -57,7 +57,7 @@ GitHub Actions 在推送与 PR 时运行这些 JVM 测试，不代表完成 Andr
 ```powershell
 python tools/build.py
 python tools/build_test.py
-& .tools/android-sdk/platform-tools/adb.exe install -r dist/time-pocket-0.6.1-debug.apk
+& .tools/android-sdk/platform-tools/adb.exe install -r dist/time-pocket-0.6.8-debug.apk
 & .tools/android-sdk/platform-tools/adb.exe install -r app/build/manual/instrumentation/tests.apk
 & .tools/android-sdk/platform-tools/adb.exe shell am instrument -w cn.timepocket.app.tests/cn.timepocket.app.PocketInstrumentation
 ```
@@ -66,7 +66,7 @@ python tools/build_test.py
 
 ## UI 与真机检查
 
-`emulator_setup.py` / `start_emulator.py` 创建并启动 Windows PocketQA 模拟器，会下载镜像并占用磁盘。`ui_review_qa.py 0.6.1` / `capture_ui.py` 硬编码目标 `emulator-5554`，操作 UI、创建测试手记并输出截图，只用于专用测试模拟器。
+`emulator_setup.py` / `start_emulator.py` 创建并启动 Windows PocketQA 模拟器，会下载镜像并占用磁盘。`ui_review_qa.py 0.6.8` / `capture_ui.py` 硬编码目标 `emulator-5554`，操作 UI、创建测试手记并输出截图，只用于专用测试模拟器。
 
 `device_qa.py`、`live_qa.py`、`v02_qa.py`、`verify_live_result.py` 是早期辅助脚本，含旧版本 APK 路径或 UI 假设，保留供复现历史问题，不是当前通用验收入口。`setup_gradle.py` 用于重新获取 Wrapper，正常克隆后无需运行。
 
