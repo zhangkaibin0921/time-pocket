@@ -150,8 +150,11 @@ public final class PocketDb extends SQLiteOpenHelper {
         }
         return result;
     }
+    static long sumAppUsage(List<AppUsage> apps) {
+        return apps.stream().mapToLong(AppUsage::duration).sum();
+    }
     public long total(long begin,long end,String pkg) {
-        long n=0;for(AppUsage a:ranking(begin,end,pkg)) n+=a.duration;return n;
+        return sumAppUsage(ranking(begin,end,pkg));
     }
     public record Footprint(String pkg,String label,String kind,long at,boolean approximate,String source) {
         public Footprint(String pkg,String label,String kind,long at,boolean approximate){this(pkg,label,kind,at,approximate,approximate?"inventory":"broadcast");}
@@ -179,11 +182,11 @@ public final class PocketDb extends SQLiteOpenHelper {
         List<Footprint> rows=new ArrayList<>();List<String> args=new ArrayList<>(List.of(""+begin,""+end));
         String where = """
                 ((source='broadcast' AND kind IN ('install','remove'))
-                 OR (source='inventory' AND kind IN ('observed_present','observed_missing','install_time_changed')))
+                 OR (source='inventory' AND kind IN ('observed_present','observed_missing')))
                  AND at>=? AND at<?
                 """;
         if ("install".equals(kind)) {
-            where += " AND kind IN ('install','observed_present','install_time_changed')";
+            where += " AND kind IN ('install','observed_present')";
         } else if ("remove".equals(kind)) {
             where += " AND kind IN ('remove','observed_missing')";
         } else if (kind != null) {

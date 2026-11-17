@@ -32,7 +32,7 @@ def main():
     run([BT/'aapt2.exe','compile','--dir',ROOT/'app/src/main/res','-o',OUT/'resources.zip'])
     manifest=OUT/'AndroidManifest.xml'
     manifest.write_text((ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding='utf-8').replace('<manifest ', '<manifest package="cn.timepocket.app" ',1),encoding='utf-8')
-    run([BT/'aapt2.exe','link','-o',OUT/'base.apk','-I',JAR,'--manifest',manifest,'--java',OUT/'gen','--min-sdk-version','26','--target-sdk-version','35','--version-code','38','--version-name','0.6.8','--debug-mode',OUT/'resources.zip'])
+    run([BT/'aapt2.exe','link','-o',OUT/'base.apk','-I',JAR,'--manifest',manifest,'--java',OUT/'gen','--min-sdk-version','26','--target-sdk-version','35','--version-code','41','--version-name','0.6.11','--debug-mode',OUT/'resources.zip'])
     files=list((ROOT/'app/src/main/java').rglob('*.java'))+list((OUT/'gen').rglob('*.java'))
     argfile=OUT/'sources.txt'
     argfile.write_text('\n'.join('"'+str(f).replace('\\','/')+'"' for f in files),encoding='utf-8')
@@ -48,7 +48,7 @@ def main():
     if not key.exists():
         run([JAVA/'keytool.exe','-genkeypair','-keystore',key,'-storepass','android','-alias','androiddebugkey','-keypass','android','-keyalg','RSA','-keysize','2048','-validity','10000','-dname','CN=Time Pocket Debug,O=Local Development,C=CN'])
     dest=ROOT/'dist';dest.mkdir(exist_ok=True)
-    apk=dest/'time-pocket-0.6.8-debug.apk'
+    apk=dest/'time-pocket-0.6.11-debug.apk'
     run([JAVA/'java.exe','-jar',BT/'lib/apksigner.jar','sign','--ks',key,'--ks-key-alias','androiddebugkey','--ks-pass','pass:android','--key-pass','pass:android','--out',apk,OUT/'aligned.apk'])
     run([JAVA/'java.exe','-jar',BT/'lib/apksigner.jar','verify','--verbose',apk])
     run([BT/'aapt2.exe','dump','badging',apk])

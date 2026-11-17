@@ -151,8 +151,11 @@ public final class PocketInstrumentation extends Instrumentation {
             helper.lifecycle("qa.removed", "QA", "remove", 20, true, "legacy");
             helper.lifecycle("qa.removed", "QA", "observed_missing", 40, true, "inventory");
             helper.lifecycle("qa.removed", "QA", "observed_present", 30, true, "inventory");
+            helper.lifecycle("qa.removed", "QA", "install_time_changed", 42, true, "inventory");
+            helper.lifecycle("qa.removed", "QA", "update", 44, false, "broadcast");
             eq(helper.findFootprints("remove", "qa.removed", 0, 50, 10).size(), 1, "app disappearance shows in removal filter, legacy excluded");
             eq(helper.findFootprints("install", "qa.removed", 0, 50, 10).size(), 1, "app appearance shows in installation filter");
+            eq(helper.findFootprints(null, "qa.removed", 0, 50, 10).size(), 2, "metadata changes and updates stay out of all footprints");
             helper.confirmFootprint("qa.removed", "QA", "remove", 39);
             List<PocketDb.Footprint> removals = helper.findFootprints("remove", "qa.removed", 0, 50, 10);
             eq(removals.size(), 1, "queued system notification replaces matching observation");

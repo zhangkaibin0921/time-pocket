@@ -4,15 +4,15 @@
 
 一款完全离线的 Android 应用：统计应用使用时长、记录安装卸载足迹，用文字与图片留住每一天。数据保存在设备本地，不需要账号，也没有广告。
 
-**Android 8.0+ · Java 17 · 原生 Android Views · SQLite · 当前源码版本 v0.6.8**
+**Android 8.0+ · Java 17 · 原生 Android Views · SQLite · 当前源码版本 v0.6.11**
 
 ## 能做什么
 
 | 页面 | 功能 |
 | --- | --- |
 | **时光** | 查看今天、近 7 天、近 30 天或自选日期的应用使用时长。点击图表按小时或日期筛选应用排行，也可查看单个应用的历史累计。 |
-| **一天** | 按日期回看应用时间线，补记读书、散步等活动；支持分类、备注、跨夜记录和最多 3 张图片，先查看详情再进入编辑。 |
-| **足迹** | 查看安装与卸载记录，区分系统通知和清单补记。支持按应用、事件类型和日期组合筛选。 |
+| **一天** | 按日期回看应用时间线，当天总用时与「时光」一致。可补记读书、散步等活动，支持分类、备注、跨夜记录和最多 3 张图片。打开已保存的手记会先看到详情。 |
+| **足迹** | 查看安装与卸载两类记录，分别标明系统通知或清单补记。支持按应用、事件类型和日期组合筛选。 |
 | **口袋** | 查看采集与权限状态、后台运行指引，手动刷新，导出或恢复本地 JSON 备份。 |
 
 - **卸载后仍保留历史**：同一用户环境下，同包名应用重装后继续累计已保存的使用时长。
@@ -81,7 +81,7 @@ python tools/bootstrap.py
 python tools/build.py
 ```
 
-安装包为 `dist/time-pocket-0.6.8-debug.apk`。SDK 准备完成后，该构建路径可离线运行。如果已有 SDK，可设置 `ANDROID_HOME`，其中需安装 Platform 35 和 Build Tools 35.0.0。
+安装包为 `dist/time-pocket-0.6.11-debug.apk`。SDK 准备完成后，该构建路径可离线运行。如果已有 SDK，可设置 `ANDROID_HOME`，其中需安装 Platform 35 和 Build Tools 35.0.0。
 
 ### Android Studio / Gradle
 
@@ -109,7 +109,7 @@ Gradle 输出：`app/build/outputs/apk/debug/app-debug.apk`。本次源码提交
 python tools/test.py
 ```
 
-覆盖使用事件归并、一天时间线和日期统计桶，v0.6.8 共 368 项断言。Android SQLite、备份及数据库升级测试需在设备或模拟器运行，步骤见 [开发指南](docs/DEVELOPMENT.md#android-数据库测试)。真机检查项目见 [设备验收清单](docs/DEVICE_CHECKLIST.md)。
+覆盖使用事件归并、一天时间线和日期统计桶，v0.6.11 共 368 项断言。Android SQLite、备份及数据库升级测试需在设备或模拟器运行，步骤见 [开发指南](docs/DEVELOPMENT.md#android-数据库测试)。真机检查项目见 [设备验收清单](docs/DEVICE_CHECKLIST.md)。
 
 ## 项目结构
 

@@ -228,8 +228,8 @@ public final class MainActivity extends Activity {
     private void showPageHelp(){
         if(detailPkg!=null){explain("应用时长说明","卸载不会删除已保存的使用时长。同一包名重新安装后，会接着累计。应用分身、工作资料和不同包名版本暂不合并。\n\n"+usageHelp()+"\n\n应用包名："+detailPkg);return;}
         if(tab==0){explain("统计说明",usageHelp());return;}
-        if(tab==3){explain("一天的记录说明","应用片段来自已保存的前台使用记录，可能延迟或遗漏。本页时长是筛选后的时间线覆盖时长；“时光”页是各应用累计时长，包含短片段，分屏重叠也可能让数值不同。未记录不代表没用手机；有采集缺口的日期会提示记录不完整。\n\n点击未记录时段可以补记，也可点“记一件事”自由填写。手动记录可编辑、删除，可附最多 3 张图片，并随本地备份导出。图片以压缩副本保存在本机，取消编辑不会修改原记录。睡眠等活动可选择结束于次日。\n\n手动活动与手机使用可以重叠，两者分别保留。手机使用时长合并同时发生的片段，不重复累加；同一活动跨日时只展示当天部分。\n\n睡眠默认按前晚 18:00 至当天 12:00 间最长的夜间停用段推测，也支持凌晨 6:00 前入睡。推测前与时间线一样，先忽略系统桌面及每天不足 1 分钟的应用片段；夜间短暂使用不会切断睡眠。需要入睡前和起床后都有筛选后保留的记录，缺少任一端时不推测；已知采集缺口或手动记录覆盖的夜晚不推测。点击睡眠可以调整或选择“不作为睡眠”，修改会保留并随备份保存。\n\n先隐藏系统桌面和当天不足 1 分钟的应用片段，再合并同一应用的相邻片段（间隔不超过 5 分钟）。中间仍有其他应用、手动活动或睡眠时不跨段合并。恰好 1 分钟的片段保留；手记和睡眠不受此筛选影响。卡片跨度含间隔，但“使用”时长与本页手机总时长只统计筛选后保留的实际应用片段。原始记录和“时光”统计不变，睡眠按同样的筛选规则重新推测，手动调整过的睡眠保留。合并后的间隔可在详情里补记，仍计入未记录时长。\n\n时间线按开始时间倒序排列，最近的时段在上方。今天只显示已过去的时间。两分钟以内（含两分钟）的未记录空隙收起显示，合并片段详情也不提供这些短间隔的补记入口；仍计入未记录时长，不会算作应用使用或睡眠。");return;}
-        if(tab==1){explain("足迹说明","系统通知显示安装、卸载通知的接收时间。清单补记显示发现应用出现、消失或安装信息变化的时间。具体操作时间可能更早。\n\n更新不记为安装，也不记录下载过程。两次检查之间装了又卸载的应用，只有收到系统通知才有机会记录。\n\n可按应用和日期筛选，点击单条足迹查看来源。");return;}
+        if(tab==3){explain("一天的记录说明","应用片段来自已保存的前台使用记录，可能延迟或遗漏。“应用使用时长”和“时光”采用同一口径：相加当天各应用的前台用时，包含未在时间线显示的短片段和桌面用时。分屏时应用各自计时。未记录不代表没用手机；有采集缺口的日期会提示记录不完整。\n\n点击未记录时段可以补记，也可点“记一件事”自由填写。手动记录可编辑、删除，可附最多 3 张图片，并随本地备份导出。图片以压缩副本保存在本机，取消编辑不会修改原记录。睡眠等活动可选择结束于次日。\n\n手动活动与应用使用可以重叠，两者分别保留。跨日片段只展示当天部分。\n\n睡眠默认按前晚 18:00 至当天 12:00 间最长的夜间停用段推测，也支持凌晨 6:00 前入睡。推测前与时间线一样，先忽略系统桌面及每天不足 1 分钟的应用片段；夜间短暂使用不会切断睡眠。需要入睡前和起床后都有筛选后保留的记录，缺少任一端时不推测；已知采集缺口或手动记录覆盖的夜晚不推测。点击睡眠可以调整或选择“不作为睡眠”，修改会保留并随备份保存。\n\n先隐藏系统桌面和当天不足 1 分钟的应用片段，再合并同一应用的相邻片段（间隔不超过 5 分钟）。中间仍有其他应用、手动活动或睡眠时不跨段合并。恰好 1 分钟的片段保留；手记和睡眠不受此筛选影响。卡片的用时按实际使用片段计算，合并间隔可在详情里补记。睡眠推测也采用时间线的筛选规则，手动调整过的睡眠保留。\n\n时间线按开始时间倒序排列，最近的时段在上方。今天只显示已过去的时间。两分钟以内（含两分钟）的未记录空隙收起显示，合并片段详情也不提供这些短间隔的补记入口；“时间线空白”是当天未被可见应用片段、手记或睡眠覆盖的时间。");return;}
+        if(tab==1){explain("足迹说明","系统通知显示接收时间，清单补记显示发现安装或卸载的时间。实际操作时间可能更早。\n\n更新不计入足迹。两次检查之间装了又卸载的应用，只有收到系统通知才有机会记录。\n\n可按应用和日期筛选，点击单条足迹查看来源。");return;}
         explain("口袋说明","使用情况访问权限用于读取应用使用记录。后台约每 15 分钟尝试采集，系统省电可能延迟；可在“后台运行指引”中查看设置建议。\n\n导出备份可保存使用记录、足迹、手动活动、附带图片及近期原始事件，单份备份目前最多 50 MB。恢复会替换当前记录，操作前会再次确认。卸载时光口袋或清除数据前，请先导出备份。");
     }
     private View coverageHint(long[] b){
@@ -332,7 +332,7 @@ public final class MainActivity extends Activity {
         ranges();
         long[] bounds = bounds();
         List<PocketDb.AppUsage> ranks = ranking(bounds[0], bounds[1], null);
-        long total = ranks.stream().mapToLong(PocketDb.AppUsage::duration).sum();
+        long total = PocketDb.sumAppUsage(ranks);
         LinearLayout overview = card(WHITE);
         overview.setPadding(dp(18), dp(14), dp(18), dp(12));
         boolean stacked = stackMetrics();
@@ -413,7 +413,7 @@ public final class MainActivity extends Activity {
         return new long[]{hour.start(),hour.end()};
     }
     private void refreshRanking(){
-        long[] b=selectedBounds();rankRows=ranking(b[0],b[1],null);rankTotal=rankRows.stream().mapToLong(PocketDb.AppUsage::duration).sum();
+        long[] b=selectedBounds();rankRows=ranking(b[0],b[1],null);rankTotal=PocketDb.sumAppUsage(rankRows);
         rankTitle.setText(selectedFirst == null ? "应用排行" : selectedCaption("应用"));
         rankScope.setText("合计 " + duration(rankTotal) + " · " + rankRows.size() + " 个应用");
         rankScope.setVisibility(selectedFirst == null ? View.GONE : View.VISIBLE);
@@ -557,7 +557,7 @@ public final class MainActivity extends Activity {
     private void detail(){
         LinearLayout intro=row();intro.addView(iconAction(ArtViews.ActionIcon.PREVIOUS,"回到时光",this::returnFromAppDetails),lp(48,48));
         intro.addView(icon(detailPkg,detailLabel),lp(32,32));TextView title=pageTitle(detailLabel);title.setPadding(dp(10),0,dp(4),0);intro.addView(title,new LinearLayout.LayoutParams(0,-2,1));intro.addView(helpButton(),lp(48,48));add(body,intro);space(body,12);
-        ranges();long[] b=selectedBounds();long selected=ranking(b[0],b[1],detailPkg).stream().mapToLong(PocketDb.AppUsage::duration).sum();long lifetime=db.total(0,System.currentTimeMillis(),detailPkg);
+        ranges();long[] b=selectedBounds();long selected=db.total(b[0],b[1],detailPkg);long lifetime=db.total(0,System.currentTimeMillis(),detailPkg);
         add(body,coverageHint(b));
         LinearLayout hero=card(PEACH);detailScope=text(detailScopeTitle(),13,0xff9b674f,false);add(hero,detailScope);space(hero,12);detailValue=durationValue(selected,32,INK);add(hero,detailValue);space(hero,18);add(hero,text("口袋里累计收藏了  "+duration(lifetime),14,INK,true));add(body,hero);space(body,20);
         LinearLayout cc=card(WHITE);heading(cc,"相伴的节奏",dayCount()>30?"每柱为多日合计":null);cc.addView(chart(bounds(),detailPkg),lp(-1,190));addChartSelection(cc);add(body,cc);space(body,20);add(body,button("查看这个应用的安装与卸载",WHITE,()->{footPkg=detailPkg;footLabel=detailLabel;footFilter=null;footStart=footEnd=null;footLimit=50;detailPkg=null;tab=1;render();}));
@@ -630,13 +630,7 @@ public final class MainActivity extends Activity {
             String time = occurred.format(clockFormat);
             boolean notified = f.source().equals("broadcast");
             boolean removed = f.kind().equals("remove") || f.kind().equals("observed_missing");
-            String eventLabel = switch (f.kind()) {
-                case "install" -> "安装";
-                case "remove" -> "卸载";
-                case "observed_present" -> "应用出现";
-                case "observed_missing" -> "应用消失";
-                default -> "安装信息变化";
-            };
+            String eventLabel = removed ? "卸载" : "安装";
             String source = notified ? "系统通知" : "清单补记";
             String explanation = notified ? "系统通知接收时间"
                     : "这是核对应用清单时发现的变化，显示的是发现时间。";
@@ -748,7 +742,7 @@ public final class MainActivity extends Activity {
 
         List<DayTimeline.Item> apps=db.dayUsage(begin,end);
         List<PocketDb.ActivityEntry> manual=db.activities(begin,end);
-        List<DayTimeline.Span> phone=new ArrayList<>(),covered=new ArrayList<>();List<DayRow> rows=new ArrayList<>();
+        List<DayTimeline.Span> covered=new ArrayList<>();List<DayRow> rows=new ArrayList<>();
         for(PocketDb.ActivityEntry item:manual){long a=Math.max(begin,item.start()),b=Math.min(end,item.end());covered.add(new DayTimeline.Span(a,b));rows.add(new DayRow(a,b,item,null));}
         List<DayTimeline.Span> sleepSpans=new ArrayList<>();
         for(var activity:manual)if(activity.category().equals("睡觉"))sleepSpans.add(new DayTimeline.Span(activity.start(),activity.end()));
@@ -759,21 +753,25 @@ public final class MainActivity extends Activity {
         }
         Set<String> hidden=HomeApps.packages(this);
         List<DayTimeline.Group> groups=DayTimeline.groupApps(apps,hidden,covered,begin,end);
-        for(DayTimeline.Group app:groups){phone.addAll(app.segments());rows.add(new DayRow(app.start(),app.end(),null,app));}
-        covered.addAll(phone);List<DayTimeline.Span> blanks=DayTimeline.blanks(covered,begin,end);
+        for(DayTimeline.Group app:groups){
+            covered.addAll(app.segments());
+            rows.add(new DayRow(app.start(),app.end(),null,app));
+        }
+        List<DayTimeline.Span> blanks=DayTimeline.blanks(covered,begin,end);
         List<DayTimeline.Span> displayed=new ArrayList<>(covered);for(DayTimeline.Group app:groups)displayed.add(new DayTimeline.Span(app.start(),app.end()));
         for(DayTimeline.Span blank:DayTimeline.blanks(displayed,begin,end))if(blank.end()-blank.start()>HIDDEN_GAP_MAX_MS)rows.add(new DayRow(blank.start(),blank.end(),null,null));
         LinearLayout summary=card(GREEN);summary.setPadding(dp(18),dp(16),dp(18),dp(14));
         boolean stacked = stackMetrics();
         LinearLayout numbers=stacked?column():row();LinearLayout phoneMetric=column(),notesMetric=column();
-        add(phoneMetric,text("时间线使用时长",12,MUTED,false));space(phoneMetric,6);
-        TextView phoneValue=text(duration(DayTimeline.duration(phone,begin,end)),24,INK,true);phoneValue.setMaxLines(1);phoneValue.setAutoSizeTextTypeUniformWithConfiguration(16,24,1,android.util.TypedValue.COMPLEX_UNIT_SP);add(phoneMetric,phoneValue);
+        add(phoneMetric,text("应用使用时长",12,MUTED,false));space(phoneMetric,6);
+        long appTotal = db.total(begin,end,null);
+        TextView phoneValue=text(duration(appTotal),24,INK,true);phoneValue.setMaxLines(1);phoneValue.setAutoSizeTextTypeUniformWithConfiguration(16,24,1,android.util.TypedValue.COMPLEX_UNIT_SP);add(phoneMetric,phoneValue);
         notesMetric.addView(text("生活手记",12,MUTED,false),lp(-2,-2));space(notesMetric,6);notesMetric.addView(text(manual.size()+" 条",24,INK,true),lp(-2,-2));
         numbers.addView(phoneMetric,stacked?lp(-1,-2):new LinearLayout.LayoutParams(0,-2,1));
         if(stacked)space(numbers,12);else notesMetric.setPadding(dp(16),0,0,0);
         numbers.addView(notesMetric,lp(stacked?-1:-2,-2));add(summary,numbers);space(summary,16);
         if(!sleepSpans.isEmpty()){add(summary,text("睡眠 "+duration(DayTimeline.duration(sleepSpans,begin,end))+" · 含手动与推测",12,UiTokens.PURPLE,true));space(summary,8);}
-        add(summary,text(duration(DayTimeline.duration(blanks,begin,end))+" 未记录",12,MUTED,false));add(body,summary);space(body,4);
+        add(summary,text("时间线空白 "+duration(DayTimeline.duration(blanks,begin,end)),12,MUTED,false));add(body,summary);space(body,4);
         String status=!Collector.allowed(this)?"应用记录未授权 · 可直接写手记":db.number("last_sync")==0?"应用记录尚未采集":db.hasGap(begin,end)||(db.number("import_begin")>0&&begin<db.number("import_begin"))?"应用记录可能不完整":"未记录时段可点击补充";
         if(!status.equals("未记录时段可点击补充")){TextView info=text(status+"  ⓘ",11,MUTED,false);info.setMinHeight(dp(48));info.setGravity(Gravity.CENTER_VERTICAL);info.setOnClickListener(v->showPageHelp());add(body,info);}else space(body,12);
         add(body, text("这一天的记录", 18, INK, true));
@@ -886,6 +884,15 @@ public final class MainActivity extends Activity {
     }
     private void settings(){
         header("我的口袋");
+        LinearLayout banner = row();
+        banner.setBackground(bg(GREEN,22));
+        banner.setPadding(dp(18),dp(6),dp(12),dp(6));
+        TextView copy = text("看见时间，\n也看见生活",22,INK,true);
+        copy.setLineSpacing(dp(3),1f);
+        banner.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
+        banner.addView(new ArtViews.Mascot(this,true),lp(94,80));
+        add(body,banner);
+        space(body,18);
         heading(body,"记录与权限",null);space(body,12);LinearLayout recordSettings=settingsGroup();
         setting(recordSettings,"使用情况访问",Collector.allowed(this)?"已开启":"未开启",this::openUsage);
         setting(recordSettings,"后台运行指引","适配 OPPO / vivo / 一加的设置建议",this::backgroundHelp);
@@ -893,7 +900,7 @@ public final class MainActivity extends Activity {
         space(body,24);heading(body,"备份与数据",null);space(body,12);LinearLayout backupSettings=settingsGroup();
         setting(backupSettings,"导出本地备份","包含使用记录、手记和图片",()->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/json").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"时光口袋-"+LocalDate.now()+".json");launch(i,20);});
         setting(backupSettings,"从文件恢复","恢复会替换当前记录，操作前会再次确认",()->{launch(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),21);});
-        space(body,24);setting(settingsGroup(),"关于时光口袋","v0.6.8 · 使用与数据说明",()->explain("关于时光口袋 · v0.6.8","同一包名重装后继续累计，应用分身、工作资料和不同包名版本暂不合并。\n\n后台约每 15 分钟尝试采集，系统省电可能延迟。近期事件会反复核对，只有已确认结束的前台片段计入。未安装本工具前的完整历史无法保证恢复。\n\n卸载时光口袋或清除其数据会删除本地记录，请先导出备份。\n\n每页右上角可查看说明；刷新和其他选项在“更多操作”中。"));
+        space(body,24);setting(settingsGroup(),"关于时光口袋","v0.6.11 · 使用与数据说明",()->explain("关于时光口袋 · v0.6.11","同一包名重装后继续累计，应用分身、工作资料和不同包名版本暂不合并。\n\n后台约每 15 分钟尝试采集，系统省电可能延迟。近期事件会反复核对，只有已确认结束的前台片段计入。未安装本工具前的完整历史无法保证恢复。\n\n卸载时光口袋或清除其数据会删除本地记录，请先导出备份。\n\n每页右上角可查看说明；刷新和其他选项在“更多操作”中。"));
     }
     private LinearLayout settingsGroup() {
         LinearLayout group = listPanel();
